@@ -56,12 +56,14 @@ def createPart():
     
     return parts
 
+#delete a part by company part #
 def deletePart(partsDB):
     part_num = input('Enter the company part number for the deletion: ')
     for record in partsDB:
         if record[0] == part_num:
             partsDB.remove(record)
 
+#Search function by company part # or manufacturer part #
 def searchPart(partsDB):
     print()
     print('1. Search by Company Part #')
@@ -86,7 +88,7 @@ def searchPart(partsDB):
         print('Invalid input, please enter 1 or 2: ')
         searchPart(partsDB)
             
-    
+#formatted print function
 def pretty_print(records):
     print('\tPART DATABASE')
     print('\t-------------')
