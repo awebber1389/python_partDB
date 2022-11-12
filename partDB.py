@@ -1,125 +1,148 @@
-
-'''
-#The DB
-partsDB = []
-
-#An individual part
-parts = []
-
-#A 'dictionary' with index of attributes
-partAttr = ['company_part_no', 'manufact_part_no', 'description', 'cost', 'on_hand', 'needed', 'lead_time']
-
-#attIdx = partAttr.index('company_part_no')
-#print(attIdx)
-
-while True:
-    #Iterate through attributes, prompting input from user for information and add to part list
-    for attrib in partAttr:
-        item = input(f'{attrib}: ')
-        parts.insert(partAttr.index(attrib), item)
-    #Append the part to the parts db
-    partsDB.append(parts.copy())
-    #prompt user to continue entering parts or quit
-    another = input('Another part? "Y" to continue "Q" to quit: ')
-    if another.casefold() == 'q':
-        break
-
-print(partsDB.__len__())
-print(partsDB)
-'''
-
-#Continuation from week 3 problem
+import PartVersion as pvers
 
 #put the attribute list global for use by all methods needed
 partAttr = ['Company Part #', 'Manufacturer\'s Part #', 'Description', 'Cost', 'Amt On Hand', 'Amt Needed', 'Lead Time']
+#The DB collection
+partsDB = []
 
-#menu function for basic UI
-def menu():
-    print('******************************')
-    print('\tPART DATABASE')
-    print('******************************')
-    print('Options: ')
-    print('1. Create a record')
-    print('2. Delete a record')
-    print('3. Search for a record')
-    print('4. Print Database records')
-    print('5. Exit')
-    return (input('Insert number corresponding to option: '))
+#List the part object templates for user
+def showVersions():
+    print("====Part Templates====")
+    for template in pvers.templateList:
+        for k,v in template.items():
+            print(f'{k}: {v}')
+        print()
 
 #function to create a part item from user input and return it
 def createPart():
-    parts = []
-    for attrib in partAttr:
-        item = input(f'{attrib}: ')
-        parts.insert(partAttr.index(attrib), item)
-    print()
-    
+    parts = dict()
+    showVersions()
+    versionNum = input('\nInsert the number of the template you wish to use: ')
+    for template in pvers.templateList:
+        if template["version"] == versionNum:
+            parts = template
+            for key in parts.keys():
+                if key != 'version':
+                    parts[key] = input(f'Insert {key}: ')
+
     return parts
 
 #delete a part by company part #
 def deletePart(partsDB):
     part_num = input('Enter the company part number for the deletion: ')
     for record in partsDB:
-        if record[0] == part_num:
+        if record["Company Part #"] == part_num:
             partsDB.remove(record)
 
 #Search function by company part # or manufacturer part #
 def searchPart(partsDB):
     print()
-    print('1. Search by Company Part #')
-    print('2. Search by Manufaturer\'s Part #')
-    print('3. Return to main menu')
-    choice = input('Enter number corresponding to search method: ')
-    if choice == '1':
-        company_partno = input('Enter the Company Part #: ')
-        for record in partsDB:
-            if company_partno == record[0]:
-                print('Part Found')
-                return record
-    elif choice == '2':
-        manufact_partno = input('Enter the Manufacturer\'s Part #: ')
-        for record in partsDB:
-            if manufact_partno == record[1]:
-                print('Part Found')
-                return record
-    elif choice == '3':
-        return None
+    choice = input('Enter the Company Part #: ')
+    for record in partsDB:
+        if record.get("Company Part #") == choice:
+            return record
+        else: 
+            print("Record not found...\n")
+            searchPart(partsDB)
+    
+#Edit the fields of the existing part
+def editPart(record):
+    partDBRecordIndex = partsDB.index(record)
+    partDBRecord = partsDB.pop(partDBRecordIndex)
+    for k, v in partDBRecord.items():
+        print(f'Current - {k}: {v}')
+        partDBRecord[k] = input(f'Insert new {k}: ')
+    partsDB.insert(partDBRecordIndex, partDBRecord)
+    
+#Changing to a version with more fields
+def changeVersionAndAddFields(partDBRecord, newVersion):
+    newTemplate = pvers.templateList[int(newVersion)-1]
+    for k in newTemplate.keys():
+        if k == 'version':
+            continue
+        elif partDBRecord.__contains__(k):
+            newTemplate[k] = partDBRecord.get(k)
+        else:
+            newTemplate[k] = input(f'Input new field value {k}: ')
+    return newTemplate
+ 
+#Changing to a version with less fields 
+def changeVersionAndRemoveFields(partDBRecord, newVersion):
+    newTemplate = pvers.templateList[int(newVersion)-1]
+    for k in partDBRecord.keys():
+        if k == 'version':
+            continue
+        elif newTemplate.__contains__(k):
+            newTemplate[k] = partDBRecord.get(k)
+    return newTemplate
+
+#Change the version of the current record
+def changePartVersion(record):
+    partDBRecordIndex = partsDB.index(record)
+    partDBRecord = partsDB.pop(partDBRecordIndex)
+    partVersion = partDBRecord.get('version')
+    showVersions()
+    print(f'Current version is: {partVersion}')
+    newVersion = input('Enter the number of the version you wish to change to: ')
+    if int(newVersion) < int(partVersion):
+        partDBRecord = changeVersionAndAddFields(partDBRecord, newVersion)
     else:
-        print('Invalid input, please enter 1 or 2: ')
-        searchPart(partsDB)
+        partDBRecord = changeVersionAndRemoveFields(partDBRecord, newVersion)
+    partsDB.insert(partDBRecordIndex, partDBRecord)
+
+#function for changing the template     
+def showRecordOptions(record):
+    while True:
+        print()
+        print('Record Options')
+        print('1. Edit fields')
+        print('2. Change version')
+        print('3. Main Menu')
+        choice = input('Enter your choice... ')
+        if choice == '1':
+            editPart(record)
+        elif choice == '2':
+            changePartVersion(record)
+        elif choice == '3':
+            print('Returning to Main Menu...')
+            break
+        else:
+            print('Invalid input...')
             
 #formatted print function
 def pretty_print(records):
     print('\tPART DATABASE')
     print('\t-------------')
-    for record in records:
-        for i in range(len(record)):
-            print(f'{i+1}. {partAttr[i]}: {record[i]}')
-            
-    print()
+    for i in range(len(records)):
+        print(f'Record: {i+1}')
+        for k, v in records[i].items():
+            print(f'\t{k}: {v}')
+        print()
     
-#The DB collection
-partsDB = []
-#A list of returned search records for other operations
-searchRecords = []
-
-#the looping menu
-while True:
-    choice = menu()
-    if choice == '1':
-        partsDB.append(createPart())
-    elif choice == '2':
-        deletePart(partsDB)
-    elif choice == '3':
-        record = searchPart(partsDB)
-        if record is not None:
-            searchRecords.append(record)
-            pretty_print(searchRecords)
-        else:
-            print('No records found')
-    elif choice == '4':
-        pretty_print(partsDB)
-    elif choice == '5':
-        print('Closing program...')
-        break
-
+#looping menu function for basic UI
+def menu():
+    while True:
+        print('******************************')
+        print('\tPART DATABASE')
+        print('******************************')
+        print('Options: ')
+        print('1. Create a record')
+        print('2. Delete a record')
+        print('3. Search for a record')
+        print('4. Print Database records')
+        print('5. Exit')
+        choice = (input('Insert number corresponding to option: '))
+        if choice == '1':
+            partsDB.append(createPart())
+        elif choice == '2':
+            deletePart(partsDB)
+        elif choice == '3':
+            record = searchPart(partsDB)
+            showRecordOptions(record)
+        elif choice == '4':
+            pretty_print(partsDB)
+        elif choice == '5':
+            print('Closing program...')
+            break
+    
+menu()
